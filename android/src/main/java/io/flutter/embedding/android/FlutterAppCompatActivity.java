@@ -15,7 +15,6 @@ import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.EXTRA_IN
 import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.HANDLE_DEEPLINKING_META_DATA_KEY;
 import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.INITIAL_ROUTE_META_DATA_KEY;
 import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.NORMAL_THEME_META_DATA_KEY;
-import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.SPLASH_SCREEN_META_DATA_KEY;
 
 import android.content.Context;
 import android.content.Intent;
@@ -60,7 +59,7 @@ import io.flutter.plugin.platform.PlatformPlugin;
 // are duplicated for readability purposes. Be sure to replicate any change in this class in
 // FlutterActivity, too.
 public class FlutterAppCompatActivity extends AppCompatActivity
-        implements SplashScreenProvider, FlutterEngineProvider, FlutterEngineConfigurator {
+        implements FlutterEngineProvider, FlutterEngineConfigurator {
     private static final String TAG = "FlutterAppCompat";
 
     // FlutterFragment management.
@@ -303,41 +302,6 @@ public class FlutterAppCompatActivity extends AppCompatActivity
             Log.e(
                     TAG,
                     "Could not read meta-data for FlutterFragmentActivity. Using the launch theme as normal theme.");
-        }
-    }
-
-    @Nullable
-    @Override
-    public SplashScreen provideSplashScreen() {
-        Drawable manifestSplashDrawable = getSplashScreenFromManifest();
-        if (manifestSplashDrawable != null) {
-            return new DrawableSplashScreen(manifestSplashDrawable);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Returns a {@link Drawable} to be used as a splash screen as requested by meta-data in the
-     * {@code AndroidManifest.xml} file, or null if no such splash screen is requested.
-     *
-     * <p>See {@link FlutterActivityLaunchConfigs#SPLASH_SCREEN_META_DATA_KEY} for the meta-data key
-     * to be used in a manifest file.
-     */
-    @Nullable
-    private Drawable getSplashScreenFromManifest() {
-        try {
-            Bundle metaData = getMetaData();
-            int splashScreenId = metaData != null ? metaData.getInt(SPLASH_SCREEN_META_DATA_KEY) : 0;
-            return splashScreenId != 0
-                    ? ResourcesCompat.getDrawable(getResources(), splashScreenId, getTheme())
-                    : null;
-        } catch (Resources.NotFoundException e) {
-            Log.e(TAG, "Splash screen not found. Ensure the drawable exists and that it's valid.");
-            throw e;
-        } catch (PackageManager.NameNotFoundException e) {
-            // This is never expected to happen.
-            return null;
         }
     }
 
