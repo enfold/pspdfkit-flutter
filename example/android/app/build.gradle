@@ -1,26 +1,30 @@
 /*
- *   Copyright © 2018-2023 PSPDFKit GmbH. All rights reserved.
+ *   Copyright © 2018-2024 PSPDFKit GmbH. All rights reserved.
  *
  *   THIS SOURCE CODE AND ANY ACCOMPANYING DOCUMENTATION ARE PROTECTED BY INTERNATIONAL COPYRIGHT LAW
  *   AND MAY NOT BE RESOLD OR REDISTRIBUTED. USAGE IS BOUND TO THE PSPDFKIT LICENSE AGREEMENT.
  *   UNAUTHORIZED REPRODUCTION OR DISTRIBUTION IS SUBJECT TO CIVIL AND CRIMINAL PENALTIES.
  *   This notice may not be removed from this file.
  */
-apply plugin: 'com.android.application'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
 
 android {
     namespace 'com.pspdfkit.flutter.example'
-
-    compileSdkVersion androidCompileSdkVersion
+    
+    compileSdk androidCompileSdkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     defaultConfig {
-        multiDexEnabled true
+        compileSdk androidCompileSdkVersion
         applicationId "com.pspdfkit.flutter.example"
         minSdkVersion androidMinSdkVersion
         targetSdkVersion androidTargetSdkVersion
@@ -35,7 +39,7 @@ android {
             signingConfig signingConfigs.debug
         }
     }
-    namespace 'com.pspdfkit.flutter.example'
+
     lint {
         disable 'InvalidPackage', 'PSPDFKit-HandledConfigurationChanges-NoSupport'
     }
@@ -50,16 +54,5 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1'
-
-    constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
-            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
-        }
-
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
-            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
-        }
-
-    }
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
 }

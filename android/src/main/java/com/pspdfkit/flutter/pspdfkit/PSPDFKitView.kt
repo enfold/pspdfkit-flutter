@@ -1,18 +1,26 @@
 package com.pspdfkit.flutter.pspdfkit
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.MutableContextWrapper
 import android.net.Uri
+import android.util.Log
 import android.view.View
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
 import androidx.fragment.app.commitNow
 import com.pspdfkit.document.formatters.DocumentJsonFormatter
+import com.pspdfkit.document.processor.PdfProcessor
+import com.pspdfkit.document.processor.PdfProcessorTask
 import com.pspdfkit.flutter.pspdfkit.AnnotationConfigurationAdaptor.Companion.convertAnnotationConfigurations
+import com.pspdfkit.flutter.pspdfkit.toolbar.FlutterMenuGroupingRule
+import com.pspdfkit.flutter.pspdfkit.toolbar.FlutterViewModeController
 import com.pspdfkit.flutter.pspdfkit.util.DocumentJsonDataProvider
-import com.pspdfkit.flutter.pspdfkit.util.MeasurementHelper
 import com.pspdfkit.flutter.pspdfkit.util.Preconditions.requireNotNullNotEmpty
+import com.pspdfkit.flutter.pspdfkit.util.ProcessorHelper
 import com.pspdfkit.flutter.pspdfkit.util.addFileSchemeIfMissing
 import com.pspdfkit.flutter.pspdfkit.util.areValidIndexes
 import com.pspdfkit.flutter.pspdfkit.util.isImageDocument
@@ -30,9 +38,13 @@ import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+
 
 internal class PSPDFKitView(
     val context: Context,
@@ -40,8 +52,8 @@ internal class PSPDFKitView(
     messenger: BinaryMessenger,
     documentPath: String? = null,
     configurationMap: HashMap<String, Any>? = null,
-
     ) : PlatformView, MethodCallHandler {
+
     private var fragmentContainerView: FragmentContainerView? = FragmentContainerView(context)
     private val methodChannel: MethodChannel
     private val pdfUiFragment: PdfUiFragment
@@ -54,6 +66,10 @@ internal class PSPDFKitView(
         val configurationAdapter = ConfigurationAdapter(context, configurationMap)
         val password = configurationAdapter.password
         val pdfConfiguration = configurationAdapter.build()
+        val toolbarGroupingItems: List<Any>? = configurationMap?.get("toolbarItemGrouping") as List<Any>?
+
+        val measurementValueConfigurations =
+            configurationMap?.get("measurementValueConfigurations") as List<Map<String, Any>>?
 
         //noinspection pspdfkit-experimental
         pdfUiFragment = if (documentPath == null) {
@@ -75,6 +91,23 @@ internal class PSPDFKitView(
                     .build()
             }
         }
+        getFragmentActivity(context).supportFragmentManager.registerFragmentLifecycleCallbacks(FlutterPdfUiFragmentCallbacks(methodChannel,
+            measurementValueConfigurations, messenger), true)
+        getFragmentActivity(context).supportFragmentManager.registerFragmentLifecycleCallbacks( object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentAttached(
+                fm: FragmentManager,
+                f: Fragment,
+                context: Context
+            ) {
+                if (f.tag?.contains("PSPDFKit.Fragment") == true) {
+                    if (toolbarGroupingItems != null) {
+                        val groupingRule = FlutterMenuGroupingRule(context, toolbarGroupingItems)
+                        val flutterViewModeController = FlutterViewModeController(groupingRule)
+                       pdfUiFragment.setOnContextualToolbarLifecycleListener(flutterViewModeController)
+                    }
+                }
+            }
+        }, true)
 
         fragmentContainerView?.let {
             it.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
@@ -104,6 +137,7 @@ internal class PSPDFKitView(
         fragmentContainerView = null
     }
 
+    @SuppressLint("CheckResult")
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         // Return if the fragment or the document
         // are not ready.
@@ -389,41 +423,6 @@ internal class PSPDFKitView(
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(result::success)
             }
-
-            "setMeasurementScale" -> {
-                try {
-                    val scale = call.argument<Map<String, Any>>("measurementScale")
-                    val measurementScale = MeasurementHelper.convertScale(scale)
-                    if (measurementScale == null) {
-                        result.error("Error while setting measurement scale", "Invalid scale", null)
-                        return
-                    }
-                    document.measurementScale = measurementScale
-                    result.success(true)
-                } catch (e: Exception) {
-                    result.error("Error while setting measurement scale", e.message, null)
-                }
-            }
-
-            "setMeasurementPrecision" -> {
-                try {
-                    val precision = call.argument<String>("measurementPrecision")
-                    val measurementPrecision = MeasurementHelper.convertPrecision(precision)
-                    if (measurementPrecision == null) {
-                        result.error(
-                            "Error while setting measurement precision",
-                            "Invalid precision",
-                            null
-                        )
-                        return
-                    }
-                    document.measurementPrecision = measurementPrecision
-                    result.success(true)
-                } catch (e: Exception) {
-                    result.error("Error while setting measurement precision", e.message, null)
-                }
-            }
-
             "setAnnotationPresetConfigurations" -> {
                 try {
                     val annotationConfigurations =
@@ -436,7 +435,7 @@ internal class PSPDFKitView(
                         )
                         return
                     }
-                    
+
                     val configurations =
                         convertAnnotationConfigurations(context, annotationConfigurations)
 
@@ -452,9 +451,36 @@ internal class PSPDFKitView(
                 } catch (e: java.lang.Exception) {
                     result.error("AnnotationException", e.message, null)
                 }
-
             }
-
+            "getPageInfo" -> {
+                try {
+                    val pageIndex:Int = requireNotNull(call.argument("pageIndex"))
+                    val pageInfo = mapOf(
+                            "width" to document.getPageSize(pageIndex).width,
+                            "height" to document.getPageSize(pageIndex).height,
+                            "label" to document.getPageLabel(pageIndex,false),
+                            "index" to pageIndex,
+                            "rotation" to document.getPageRotation(pageIndex)
+                    )
+                    result.success(pageInfo)
+                }catch (e:Exception){
+                    result.error("DocumentException",e.message,null)
+                }
+            }
+            "exportPdf" -> {
+                try {
+                    val fileUrl = document.documentSource.fileUri?.path
+                    if (fileUrl == null) {
+                        result.error("DocumentException", "Document source is not a file", null)
+                        return
+                    }
+                    val data:ByteArray = fileUrl.let { File(it).readBytes() }
+                    result.success(data)
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Error while exporting PDF", e)
+                    result.error("DocumentException", e.message, null)
+                }
+            }
             else -> result.notImplemented()
         }
     }

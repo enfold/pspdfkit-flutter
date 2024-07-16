@@ -1,5 +1,5 @@
 ///
-///  Copyright © 2018-2023 PSPDFKit GmbH. All rights reserved.
+///  Copyright © 2018-2024 PSPDFKit GmbH. All rights reserved.
 ///
 ///  THIS SOURCE CODE AND ANY ACCOMPANYING DOCUMENTATION ARE PROTECTED BY INTERNATIONAL COPYRIGHT LAW
 ///  AND MAY NOT BE RESOLD OR REDISTRIBUTED. USAGE IS BOUND TO THE PSPDFKIT LICENSE AGREEMENT.
@@ -11,15 +11,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pspdfkit_example/utils/platform_utils.dart';
-import 'package:pspdfkit_flutter/widgets/pspdfkit_widget_controller.dart';
-import 'package:pspdfkit_flutter/widgets/pspdfkit_widget.dart';
+import 'package:pspdfkit_flutter/pspdfkit.dart';
 
 typedef PspdfkitFormExampleWidgetCreatedCallback = void Function(
     PspdfkitWidgetController view);
 
 class PspdfkitFormExampleWidget extends StatefulWidget {
   final String documentPath;
-  final dynamic configuration;
+  final PdfConfiguration? configuration;
 
   const PspdfkitFormExampleWidget({
     Key? key,
@@ -34,6 +33,7 @@ class PspdfkitFormExampleWidget extends StatefulWidget {
 
 class _PspdfkitFormExampleWidgetState extends State<PspdfkitFormExampleWidget> {
   late PspdfkitWidgetController view;
+  late PdfDocument? document;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class _PspdfkitFormExampleWidgetState extends State<PspdfkitFormExampleWidget> {
               top: false,
               bottom: false,
               child: Container(
-                  padding: PlatformUtils.isIOS()
+                  padding: PlatformUtils.isIOS() || kIsWeb
                       ? null
                       : const EdgeInsets.only(top: kToolbarHeight),
                   child: Column(children: <Widget>[
@@ -56,46 +56,102 @@ class _PspdfkitFormExampleWidgetState extends State<PspdfkitFormExampleWidget> {
                         child: PspdfkitWidget(
                             documentPath: widget.documentPath,
                             configuration: widget.configuration,
+                            onPdfDocumentLoaded: (document) {
+                              setState(() {
+                                this.document = document;
+                              });
+                            },
                             onPspdfkitWidgetCreated: (controller) {
                               setState(() {
                                 view = controller;
                               });
                               onWidgetCreated();
                             })),
-                    SizedBox(
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: <Widget>[
-                          ElevatedButton(
-                              onPressed: () {
-                                view.setFormFieldValue(
-                                    'Updated Form Field Value', 'Name_Last');
-                              },
-                              child: const Text('Set form field value')),
-                          ElevatedButton(
-                              onPressed: () async {
-                                await view
-                                    .getFormFieldValue('Name_Last')
-                                    .then((formFieldValue) async {
-                                  await showDialog<AlertDialog>(
-                                      context: context,
-                                      builder: (BuildContext context) =>
-                                          AlertDialog(
-                                            title:
-                                                const Text('Form Field Value'),
-                                            content: Text(formFieldValue ?? ''),
-                                            actions: [
-                                              TextButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                  },
-                                                  child: const Text('OK'))
-                                            ],
-                                          ));
-                                });
-                              },
-                              child: const Text('Get form field value'))
-                        ]))
+                              ElevatedButton(
+                                  onPressed: () {
+                                    view.setFormFieldValue(
+                                        'Updated Form Field Value',
+                                        'Name_Last');
+                                  },
+                                  child: const Text('Set form field value')),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                  onPressed: () async {
+                                    await view
+                                        .getFormFieldValue('Name_Last')
+                                        .then((formFieldValue) async {
+                                      await showDialog<AlertDialog>(
+                                          context: context,
+                                          builder: (BuildContext context) =>
+                                              AlertDialog(
+                                                title: const Text(
+                                                    'Form Field Value'),
+                                                content:
+                                                    Text(formFieldValue ?? ''),
+                                                actions: [
+                                                  TextButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      child: const Text('OK'))
+                                                ],
+                                              ));
+                                    });
+                                  },
+                                  child: const Text('Get form field value')),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                  onPressed: () {
+                                    document
+                                        ?.getFormFields()
+                                        .then((List<PdfFormField> formFields) {
+                                      if (kDebugMode) {
+                                        print('Form fields: $formFields');
+                                      }
+                                      showDialog<AlertDialog>(
+                                          context: context,
+                                          builder: (BuildContext context) =>
+                                              AlertDialog(
+                                                title:
+                                                    const Text('Form Fields'),
+                                                content: Text(formFields
+                                                    .map((formField) =>
+                                                        formField
+                                                            .fullyQualifiedName)
+                                                    .join('\n')),
+                                                actions: [
+                                                  TextButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                      child: const Text('OK'))
+                                                ],
+                                              ));
+                                    }).catchError((error) {
+                                      print(
+                                          'Failed to get form fields: $error');
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Failed to get form fields: $error'),
+                                        ),
+                                      );
+                                    });
+                                  },
+                                  child: const Text('Get form fields')),
+                            ]),
+                      ),
+                    )
                   ]))));
     } else {
       return Text(

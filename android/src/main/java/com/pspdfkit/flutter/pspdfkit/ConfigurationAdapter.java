@@ -1,5 +1,5 @@
 /*
- *   Copyright © 2018-2023 PSPDFKit GmbH. All rights reserved.
+ *   Copyright © 2018-2024 PSPDFKit GmbH. All rights reserved.
  *
  *   THIS SOURCE CODE AND ANY ACCOMPANYING DOCUMENTATION ARE PROTECTED BY INTERNATIONAL COPYRIGHT LAW
  *   AND MAY NOT BE RESOLD OR REDISTRIBUTED. USAGE IS BOUND TO THE PSPDFKIT LICENSE AGREEMENT.
@@ -18,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StyleRes;
 
+import com.pspdfkit.annotations.measurements.MeasurementValueConfiguration;
 import com.pspdfkit.configuration.PdfConfiguration;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
 import com.pspdfkit.configuration.activity.ThumbnailBarMode;
@@ -29,6 +30,7 @@ import com.pspdfkit.configuration.page.PageScrollMode;
 import com.pspdfkit.configuration.settings.SettingsMenuItemType;
 import com.pspdfkit.configuration.sharing.ShareFeatures;
 import com.pspdfkit.configuration.theming.ThemeMode;
+import com.pspdfkit.flutter.pspdfkit.util.MeasurementHelper;
 import com.pspdfkit.preferences.PSPDFKitPreferences;
 import com.pspdfkit.ui.special_mode.controller.AnnotationTool;
 
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 class ConfigurationAdapter {
     private static final String LOG_TAG = "ConfigurationAdapter";
@@ -45,7 +48,6 @@ class ConfigurationAdapter {
     private static final String PAGE_TRANSITION = "pageTransition";
     private static final String ENABLE_TEXT_SELECTION = "enableTextSelection";
     private static final String DISABLE_AUTOSAVE = "disableAutosave";
-
 
     // Document Presentation Options
     private static final String PAGE_MODE = "pageMode";
@@ -186,8 +188,7 @@ class ConfigurationAdapter {
     private static final String ENABLED_MEASUREMENT_TOOLS = "enableMeasurementTools";
     private static final String ENABLE_MAGNIFIER = "enableMagnifier";
     private static final String ENABLED_MEASUREMENT_TOOL_SNAPPING = "enableMeasurementToolSnapping";
-
-
+    
     @NonNull
     private final PdfActivityConfiguration.Builder configuration;
     @Nullable

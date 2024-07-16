@@ -1,5 +1,5 @@
 ///
-///  Copyright © 2021-2023 PSPDFKit GmbH. All rights reserved.
+///  Copyright © 2021-2024 PSPDFKit GmbH. All rights reserved.
 ///
 ///  THIS SOURCE CODE AND ANY ACCOMPANYING DOCUMENTATION ARE PROTECTED BY INTERNATIONAL COPYRIGHT LAW
 ///  AND MAY NOT BE RESOLD OR REDISTRIBUTED. USAGE IS BOUND TO THE PSPDFKIT LICENSE AGREEMENT.
@@ -52,7 +52,9 @@ public class EventDispatcher {
         sendEvent("flutterPdfActivityOnPause");
     }
 
-
+    public void notifyPdfFragmentAdded() {
+        sendEvent("flutterPdfFragmentAdded");
+    }
 
     public void notifyInstantSyncStarted(String documentId) {
         sendEvent("pspdfkitInstantSyncStarted", documentId);
