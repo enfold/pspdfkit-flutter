@@ -63,7 +63,6 @@ import java.util.List;
 public class FlutterAppCompatActivity extends AppCompatActivity
         implements FlutterEngineProvider, FlutterEngineConfigurator {
     private static final String TAG = "FlutterAppCompatActivity";
-    // private static final String TAG = "FlutterAppCompat"; <- incoming from upstream
 
     // FlutterFragment management.
     private static final String TAG_FLUTTER_FRAGMENT = "flutter_fragment";
